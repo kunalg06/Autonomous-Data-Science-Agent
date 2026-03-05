@@ -37,7 +37,7 @@ Claude acts as the **reasoning engine** — it reads your question, decides whic
 ---
 
 ## ✨ Features
-
+- **Automated Data Cleaning** — Auto-fixes missing values, removes duplicates, detects outliers and standardizes column names before analysis
 - **Intelligent Tool Routing** — Claude only calls the tools needed for your question, not all of them
 - **Statistical Analysis** — Correlations, distributions, and relationships between variables
 - **Auto ML Training** — Trains a Random Forest model and returns R² score and error metrics

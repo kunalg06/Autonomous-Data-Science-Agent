@@ -10,6 +10,7 @@ import anthropic
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "mcp_server"))
 from mcp_server.server import (
     describe_dataset,
+    clean_dataset,
     run_python_analysis,
     generate_chart,
     train_ml_model,
@@ -34,6 +35,17 @@ tools = [
     {
         "name": "describe_dataset",
         "description": "Inspect a CSV dataset and return summary statistics, column info, and sample rows.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "Path to the CSV file"}
+            },
+            "required": ["file_path"]
+        }
+    },
+        {
+        "name": "clean_dataset",
+        "description": "Automatically clean a dataset. Handles missing values, duplicate rows, outliers, and column name formatting. Always run this before analysis if user asks to clean data or mentions data quality issues.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -99,6 +111,8 @@ tools = [
 def execute_tool(tool_name, tool_input):
     if tool_name == "describe_dataset":
         return describe_dataset(**tool_input)
+    elif tool_name == "clean_dataset":
+        return clean_dataset(**tool_input)
     elif tool_name == "run_python_analysis":
         return run_python_analysis(**tool_input)
     elif tool_name == "generate_chart":
@@ -158,6 +172,7 @@ with st.sidebar:
     st.divider()
     st.markdown("### 💡 Example Questions")
     st.markdown("""
+- Clean my dataset
 - Find key drivers of revenue
 - Which features matter most?
 - Show correlation heatmap
@@ -212,16 +227,17 @@ You have access to tools to analyze datasets.
 The uploaded CSV file is at: {file_path}
 
 ## Tool Usage Rules — follow strictly:
+1. clean_dataset → use when user asks to clean data, fix missing values, remove duplicates, handle outliers, or mentions data quality. Also use automatically before analysis if user says "full analysis" or "analyze everything".
 
-1. describe_dataset → use ONLY when user asks about dataset overview, columns, shape, or data types. Also use it silently first if you need context before answering.
+2. describe_dataset → use ONLY when user asks about dataset overview, columns, shape, or data types. Also use it silently first if you need context before answering.
 
-2. run_python_analysis → use ONLY when user asks about correlations, statistics, relationships between variables, or key drivers.
+3. run_python_analysis → use ONLY when user asks about correlations, statistics, relationships between variables, or key drivers.
 
-3. generate_chart → use ONLY when user EXPLICITLY mentions chart, plot, graph, visualize, show me, or heatmap, OR when doing full analysis. For correlation_heatmap always pass empty string "" for x_col and y_col. NEVER generate charts unless asked or doing full analysis.
+4. generate_chart → use ONLY when user EXPLICITLY mentions chart, plot, graph, visualize, show me, or heatmap, OR when doing full analysis. For correlation_heatmap always pass empty string "" for x_col and y_col. NEVER generate charts unless asked or doing full analysis.
 
-4. train_ml_model → use ONLY when user asks about model, prediction, accuracy, training, or ML.
+5. train_ml_model → use ONLY when user asks about model, prediction, accuracy, training, or ML.
 
-5. feature_importance → use ONLY when user asks about important features, key drivers, what matters most, or feature ranking.
+6. feature_importance → use ONLY when user asks about important features, key drivers, what matters most, or feature ranking.
 
 ## Response Rules:
 - Use the MINIMUM number of tools needed to answer the question
@@ -273,6 +289,33 @@ The uploaded CSV file is at: {file_path}
                                 if img_b64:
                                     file_name = os.path.basename(result_data.get("chart_saved", "feature_importance.png"))
                                     show_chart_with_actions(img_b64, "Feature Importance Chart", file_name)
+                            elif tool_name == "clean_dataset":
+                                result_data = json.loads(result)
+                                with st.container(border=True):
+                                    st.markdown("**🧹 Data Cleaning Report**")
+                                    col_a, col_b, col_c = st.columns(3)
+                                    with col_a:
+                                        st.metric("Duplicates Removed", result_data.get("duplicates_removed", 0))
+                                    with col_b:
+                                        missing = result_data.get("missing_values_found", {})
+                                        st.metric("Columns with Missing Values", len(missing))
+                                    with col_c:
+                                        outliers = result_data.get("outliers_detected", {})
+                                        st.metric("Columns with Outliers", len(outliers))
+
+                                    if missing:
+                                        st.markdown("**Missing Values Fixed:**")
+                                        st.json(missing)
+                                    if outliers:
+                                        st.markdown("**Outliers Detected:**")
+                                        st.json(outliers)
+                                    if result_data.get("columns_renamed"):
+                                        st.markdown("**Columns Renamed:**")
+                                        st.json(result_data["columns_renamed"])
+
+                                    cleaned_path = result_data.get("cleaned_file")
+                                    if cleaned_path and os.path.exists(cleaned_path):
+                                        st.success(f"✅ Cleaned file saved as: `{os.path.basename(cleaned_path)}`")
 
                     if response.stop_reason == "end_turn":
                         final_text = " ".join(

@@ -30,6 +30,58 @@ def describe_dataset(file_path: str) -> str:
     return json.dumps(info, indent=2)
 
 @mcp.tool()
+def clean_dataset(file_path: str) -> str:
+    """Automatically clean a dataset — handle missing values,
+    duplicates, outliers and type issues."""
+    import pandas as pd
+    import json
+    import os
+
+    df = pd.read_csv(file_path)
+    report = {}
+
+    # 1. Duplicate rows
+    dupes = int(df.duplicated().sum())
+    df = df.drop_duplicates()
+    report["duplicates_removed"] = dupes
+
+    # 2. Missing values
+    missing = df.isnull().sum().to_dict()
+    report["missing_values_found"] = {k: int(v) for k, v in missing.items() if v > 0}
+    for col in df.select_dtypes(include="number").columns:
+        df[col] = df[col].fillna(df[col].median())
+    for col in df.select_dtypes(include="object").columns:
+        df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "unknown")
+    report["missing_values_strategy"] = "numeric → median, text → mode"
+
+    # 3. Outliers (IQR method)
+    outlier_report = {}
+    for col in df.select_dtypes(include="number").columns:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        outliers = ((df[col] < Q1 - 1.5 * IQR) | (df[col] > Q3 + 1.5 * IQR)).sum()
+        if outliers > 0:
+            outlier_report[col] = int(outliers)
+    report["outliers_detected"] = outlier_report
+
+    # 4. Column name cleanup
+    original_cols = list(df.columns)
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    renamed = {o: n for o, n in zip(original_cols, df.columns) if o != n}
+    report["columns_renamed"] = renamed
+
+    # 5. Save cleaned file
+    os.makedirs("uploads", exist_ok=True)
+    cleaned_path = file_path.replace(".csv", "_cleaned.csv")
+    df.to_csv(cleaned_path, index=False)
+    report["cleaned_file"] = cleaned_path
+    report["final_shape"] = {"rows": df.shape[0], "columns": df.shape[1]}
+    report["status"] = "Dataset cleaned successfully"
+
+    return json.dumps(report, indent=2)
+
+@mcp.tool()
 def run_python_analysis(file_path: str, target_column: str) -> str:
     """Run statistical analysis and correlations on a dataset."""
     import pandas as pd

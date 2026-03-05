@@ -1,0 +1,10 @@
+anthropic
+streamlit
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+scipy
+mcp
+python-dotenv

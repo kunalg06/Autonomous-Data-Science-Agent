@@ -7,8 +7,8 @@ import pandas as pd
 from dotenv import load_dotenv
 import anthropic
 
-sys.path.insert(0, "mcp_server")
-from server import (
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "mcp_server"))
+from mcp_server.server import (
     describe_dataset,
     run_python_analysis,
     generate_chart,

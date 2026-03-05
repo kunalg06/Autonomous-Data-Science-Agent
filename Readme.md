@@ -6,7 +6,7 @@ An AI-powered data science agent that automatically analyzes any CSV dataset usi
 
 ## 🎬 Demo
 
-![Demo](ShortDemo.gif)
+![Demo](Demo\ShortDemo.gif)
 
 ---
 

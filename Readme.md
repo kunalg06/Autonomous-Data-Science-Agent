@@ -176,7 +176,15 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 ---
+## 🔮 Roadmap
 
+- [ ] **Automated Data Cleaning** — auto-detect and fix missing values, 
+duplicates, outliers and column formatting before analysis
+- [ ] Support for larger real-world datasets (sales, healthcare, finance)
+- [ ] Time series analysis
+- [ ] Multi-file upload and joins
+- [ ] Auto-generated PDF report of full analysis
+---
 ## 📄 License
 
 MIT License — feel free to use, modify, and share.
